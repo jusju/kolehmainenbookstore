@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<style>
+    label {
+        display: inline-block;
+        width: 120px;
+    }
+
+    div {
+        margin-bottom: 5px;
+    }
+</style>
+<head>
+    <meta charset="UTF-8">
+    <title>Bookstore</title>
+</head>
+<body>
+    <h1>Add new book</h1>
+    <div>
+        <form th:object="${book}" th:action="@{/save}" action="#" method="post">
+            <div>
+                <input type="hidden" th:field="*{id}" />
+            </div>
+            <div>
+                <label for="author">Author</label>
+                <input type="text" id="author" th:field="*{author}" required/>
+            </div>
+            <div>
+                <label for="title">Title</label>
+                <input type="text" id="title" th:field="*{title}" required/>
+            </div>
+            <div>
+                <label for="publicationYear">Publication year</label>
+                <input type="number" id="publicationYear" th:field="*{publicationYear}" required/>
+            </div>
+            <div>
+                <label for="category">Category</label>
+                <select id="category" th:field="*{category}">
+                    <option th:each="category: ${categories}"
+                            th:value="${category.id}"
+                            th:text="${category.name}">
+                    </option>
+                </select>
+            </div>            
+            <div>
+                <label for="isbn">ISBN</label>
+                <input type="text" id="isbn" th:field="*{isbn}" required/>
+            </div>
+
+            <div>
+                <label for="price">Price</label>
+                <input type="number" id="price" step="0.01" th:field="*{price}"/>
+            </div>
+
+            <div>
+                <input type="submit" value="Save" />
+            </div>
+        </form>
+    </div>
+</body>
+</html>

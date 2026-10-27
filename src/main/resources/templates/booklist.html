@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"></html>
+<head>
+    <meta charset="UTF-8">
+    <title>Bookstore</title>
+    <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
+</head>
+<body>
+    <div class="container mt-4">
+         <h1 class="mb-2">Bookstore</h1>
+        <div class="d-flex justify-content-between align-items-center" >
+            <p> Logged in as: <span sec:authentication="name"></span></p>
+            <form th:action="@{/logout}" method="post" class="mb-4">
+                <input type="submit" value="Sign Out"/>
+            </form>
+        </div>
+        <div>
+            <table class="table table-light table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Product Code</th>
+                    <th>Author</th>
+                    <th>Title</th>
+                    <th>Year</th>
+                    <th>Category</th>
+                    <th>ISBN</th>
+                    <th>Price</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            
+            <tr th:each = "book : ${books}">
+                <td th:text="${book.id}"></td>
+                <td th:text="${book.author}"></td>
+                <td th:text="${book.title}"></td>
+                <td th:text="${book.publicationYear}"></td>
+                <td th:text="${book.category.name}"></td>
+                <td th:text="${book.isbn}"></td>
+                <td th:text="${book.price}"></td>
+                <td >
+                    <a sec:authorize="hasRole('ADMIN')" class="btn btn-danger" th:href="@{/delete/{id}(id=${book.id})}">Delete</a>
+                    <a class="btn btn-success" th:href="@{/edit/{id}(id=${book.id})}">Edit</a>
+                </td>
+                <!--<a th:href="@{/delete(id=${book.id})}">Delete</a>-->
+            </tr>
+        </table>
+        <a class="btn btn-primary" th:href="@{/add}">Add new book</a>
+        </div>
+    </div>
+</body>
+</html>
