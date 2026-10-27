@@ -13,6 +13,8 @@ REMOTE_DIR="/home/${REMOTE_USER}/${APP_NAME}"
 SERVICE_NAME="${APP_NAME}.service"
 JAR_LOCAL="target/${APP_NAME}-0.0.1-SNAPSHOT.jar"
 JAR_REMOTE="${REMOTE_DIR}/${APP_NAME}.jar"
+# Upload to the user's home first; sudo then copies it to JAR_REMOTE.
+JAR_UPLOAD="/home/${REMOTE_USER}/${APP_NAME}.jar.upload"
 
 COMMIT_MSG="${1:-deploy $(date '+%Y-%m-%d %H:%M:%S')}"
 SSH_OPTS=(-o BatchMode=yes)
@@ -38,14 +40,14 @@ echo "==> 4) build jar"
 [ -f "$JAR_LOCAL" ] || { echo "Jar not found: $JAR_LOCAL" >&2; exit 1; }
 
 echo "==> 5) scp jar to ${REMOTE}"
-if ! scp "${SSH_OPTS[@]}" "$JAR_LOCAL" "${REMOTE}:${JAR_REMOTE}.new"; then
-  echo "ERROR: could not copy jar to ${REMOTE}:${JAR_REMOTE}.new" >&2
+if ! scp "${SSH_OPTS[@]}" "$JAR_LOCAL" "${REMOTE}:${JAR_UPLOAD}"; then
+  echo "ERROR: could not copy jar to ${REMOTE}:${JAR_UPLOAD}" >&2
   exit 1
 fi
 
-echo "==> 6) move jar into place"
-if ! ssh "${SSH_OPTS[@]}" "$REMOTE" "mv -f '${JAR_REMOTE}.new' '${JAR_REMOTE}'"; then
-  echo "ERROR: could not move jar to ${JAR_REMOTE} on ${REMOTE_HOST}" >&2
+echo "==> 6) sudo copy jar into place"
+if ! ssh "${SSH_OPTS[@]}" "$REMOTE" "sudo cp -f '${JAR_UPLOAD}' '${JAR_REMOTE}' && rm -f '${JAR_UPLOAD}'"; then
+  echo "ERROR: could not copy jar to ${JAR_REMOTE} on ${REMOTE_HOST}" >&2
   exit 1
 fi
 
