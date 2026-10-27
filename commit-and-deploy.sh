@@ -45,17 +45,24 @@ if ! scp "${SSH_OPTS[@]}" "$JAR_LOCAL" "${REMOTE}:${JAR_UPLOAD}"; then
   exit 1
 fi
 
-echo "==> 6) sudo copy jar into place"
-if ! ssh "${SSH_OPTS[@]}" "$REMOTE" "sudo cp -f '${JAR_UPLOAD}' '${JAR_REMOTE}' && rm -f '${JAR_UPLOAD}'"; then
-  echo "ERROR: could not copy jar to ${JAR_REMOTE} on ${REMOTE_HOST}" >&2
-  exit 1
-fi
-
-echo "==> 7) restart ${SERVICE_NAME} (runs java -jar ${JAR_REMOTE})"
-if ! ssh "${SSH_OPTS[@]}" "$REMOTE" "sudo systemctl restart '${SERVICE_NAME}'"; then
-  echo "ERROR: could not restart ${SERVICE_NAME} on ${REMOTE_HOST}" >&2
-  exit 1
-fi
+echo "==> 6) + 7) sudo copy jar into place and restart ${SERVICE_NAME}"
+echo "    (sudo may ask for ${REMOTE_USER}'s password on ${REMOTE_HOST})"
+# -t gives sudo a terminal for the password prompt; both sudo calls share
+# one session so the password is asked only once.
+# Exit code 10 = copy failed, 11 = restart failed.
+set +e
+ssh -t "${SSH_OPTS[@]}" "$REMOTE" \
+  "sudo cp -f '${JAR_UPLOAD}' '${JAR_REMOTE}' || exit 10; \
+   rm -f '${JAR_UPLOAD}'; \
+   sudo systemctl restart '${SERVICE_NAME}' || exit 11"
+rc=$?
+set -e
+case $rc in
+  0) ;;
+  10) echo "ERROR: could not copy jar to ${JAR_REMOTE} on ${REMOTE_HOST}" >&2; exit 1 ;;
+  11) echo "ERROR: could not restart ${SERVICE_NAME} on ${REMOTE_HOST}" >&2; exit 1 ;;
+  *)  echo "ERROR: ssh to ${REMOTE} failed (exit code $rc)" >&2; exit 1 ;;
+esac
 sleep 5
 if ! ssh "${SSH_OPTS[@]}" "$REMOTE" "systemctl is-active --quiet '${SERVICE_NAME}'"; then
   echo "ERROR: ${SERVICE_NAME} is not running after restart on ${REMOTE_HOST}" >&2
