@@ -1,0 +1,8 @@
+target/
+.git/
+.vscode/
+.idea/
+*.iml
+commit-and-deploy.sh
+Dockerfile
+.dockerignore
