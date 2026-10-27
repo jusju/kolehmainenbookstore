@@ -9,10 +9,11 @@ REMOTE_USER="iinak"
 REMOTE_HOST="softala.haaga-helia.fi"
 REMOTE="${REMOTE_USER}@${REMOTE_HOST}"
 APP_NAME="kolehmainenbookstore"
-REMOTE_DIR="/home/${REMOTE_USER}/${APP_NAME}"
-SERVICE_NAME="${APP_NAME}.service"
+REMOTE_DIR="/opt/prod"
+# Check with: systemctl list-units --type=service | grep -i book
+SERVICE_NAME="iinakbookapp.service"
 JAR_LOCAL="target/${APP_NAME}-0.0.1-SNAPSHOT.jar"
-JAR_REMOTE="${REMOTE_DIR}/${APP_NAME}.jar"
+JAR_REMOTE="${REMOTE_DIR}/iinakbookapp.jar"
 # Upload to the user's home first; sudo then copies it to JAR_REMOTE.
 JAR_UPLOAD="/home/${REMOTE_USER}/${APP_NAME}.jar.upload"
 
