@@ -38,44 +38,27 @@ echo "==> 4) build jar"
 [ -f "$JAR_LOCAL" ] || { echo "Jar not found: $JAR_LOCAL" >&2; exit 1; }
 
 echo "==> 5) scp jar to ${REMOTE}"
-ssh "${SSH_OPTS[@]}" "$REMOTE" "mkdir -p '${REMOTE_DIR}'"
-scp "${SSH_OPTS[@]}" "$JAR_LOCAL" "${REMOTE}:${JAR_REMOTE}.new"
-
-echo "==> 6) + 7) replace jar, install java -jar service and restart"
-ssh "${SSH_OPTS[@]}" "$REMOTE" bash -s <<EOF
-set -euo pipefail
-
-# Keep previous jar as a backup and swap in the new one.
-if [ -f '${JAR_REMOTE}' ]; then
-  mv -f '${JAR_REMOTE}' '${JAR_REMOTE}.bak'
+if ! scp "${SSH_OPTS[@]}" "$JAR_LOCAL" "${REMOTE}:${JAR_REMOTE}.new"; then
+  echo "ERROR: could not copy jar to ${REMOTE}:${JAR_REMOTE}.new" >&2
+  exit 1
 fi
-mv -f '${JAR_REMOTE}.new' '${JAR_REMOTE}'
 
-# systemd unit running the app with java -jar (replaced on every deploy).
-cat > '${REMOTE_DIR}/${SERVICE_NAME}' <<UNIT
-[Unit]
-Description=${APP_NAME} Spring Boot application
-After=network.target mysql.service
+echo "==> 6) move jar into place"
+if ! ssh "${SSH_OPTS[@]}" "$REMOTE" "mv -f '${JAR_REMOTE}.new' '${JAR_REMOTE}'"; then
+  echo "ERROR: could not move jar to ${JAR_REMOTE} on ${REMOTE_HOST}" >&2
+  exit 1
+fi
 
-[Service]
-User=${REMOTE_USER}
-WorkingDirectory=${REMOTE_DIR}
-ExecStart=/usr/bin/env java -jar ${JAR_REMOTE}
-SuccessExitStatus=143
-Restart=on-failure
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-UNIT
-
-sudo mv -f '${REMOTE_DIR}/${SERVICE_NAME}' '/etc/systemd/system/${SERVICE_NAME}'
-sudo systemctl daemon-reload
-sudo systemctl enable '${SERVICE_NAME}'
-sudo systemctl restart '${SERVICE_NAME}'
-
+echo "==> 7) restart ${SERVICE_NAME} (runs java -jar ${JAR_REMOTE})"
+if ! ssh "${SSH_OPTS[@]}" "$REMOTE" "sudo systemctl restart '${SERVICE_NAME}'"; then
+  echo "ERROR: could not restart ${SERVICE_NAME} on ${REMOTE_HOST}" >&2
+  exit 1
+fi
 sleep 5
-sudo systemctl --no-pager status '${SERVICE_NAME}' | head -n 15
-EOF
+if ! ssh "${SSH_OPTS[@]}" "$REMOTE" "systemctl is-active --quiet '${SERVICE_NAME}'"; then
+  echo "ERROR: ${SERVICE_NAME} is not running after restart on ${REMOTE_HOST}" >&2
+  ssh "${SSH_OPTS[@]}" "$REMOTE" "systemctl --no-pager status '${SERVICE_NAME}' | head -n 15" || true
+  exit 1
+fi
 
 echo "==> Deployed. App should be at https://${REMOTE_HOST}:8090/"
